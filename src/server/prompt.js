@@ -1,0 +1,40 @@
+/**
+ * System prompt y armado de contexto para el RAG.
+ * REGLA CRITICA: responder SOLO con base en el contexto recuperado.
+ */
+
+export const SYSTEM_PROMPT = `Eres un asistente de soporte que responde preguntas de clientes SOLO con base en la documentacion oficial que se te proporciona como CONTEXTO.
+
+REGLAS ESTRICTAS:
+1. Responde UNICAMENTE usando la informacion del CONTEXTO. No uses conocimiento externo ni supongas nada.
+2. Si el CONTEXTO no contiene la respuesta, di explicitamente: "Esa informacion no esta en la documentacion disponible." y sugiere contactar al soporte del equipo. NO inventes.
+3. No menciones que existe un "contexto" ni describas tu funcionamiento interno; responde de forma natural y directa.
+4. Responde en el mismo idioma en el que el usuario hizo la pregunta (por defecto, espanol).
+5. Se claro y conciso. Usa pasos o listas cuando ayuden.
+6. No incluyas URLs en el cuerpo de la respuesta; las fuentes se muestran aparte.`;
+
+/** Construye el bloque de contexto a partir de los chunks recuperados. */
+export function buildContext(chunks) {
+  return chunks
+    .map((c, i) => `--- Fragmento ${i + 1} (de "${c.title}") ---\n${c.content}`)
+    .join('\n\n');
+}
+
+/** Mensaje de usuario final: contexto + pregunta. */
+export function buildUserMessage({ question, chunks }) {
+  const context = buildContext(chunks);
+  return `CONTEXTO:\n${context}\n\n---\n\nPREGUNTA DEL CLIENTE:\n${question}`;
+}
+
+/** Deduplica las fuentes (titulo + url) preservando el orden. */
+export function collectSources(chunks) {
+  const seen = new Set();
+  const sources = [];
+  for (const c of chunks) {
+    const key = c.source_url;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sources.push({ title: c.title, url: c.source_url });
+  }
+  return sources;
+}

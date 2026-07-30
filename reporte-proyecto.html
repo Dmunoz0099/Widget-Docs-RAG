@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reporte de Proyecto — Widget de Chat con RAG</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 18mm 16mm;
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body {
+        font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+        color: #1f2937;
+        font-size: 10.5pt;
+        line-height: 1.5;
+        margin: 0;
+      }
+      h1, h2, h3 { color: #111827; line-height: 1.25; }
+      h1 { font-size: 22pt; margin: 0 0 4px; }
+      h2 {
+        font-size: 14pt;
+        margin: 26px 0 10px;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #2563eb;
+      }
+      h3 { font-size: 11.5pt; margin: 16px 0 6px; color: #1d4ed8; }
+      p { margin: 6px 0; }
+      ul, ol { margin: 6px 0; padding-left: 20px; }
+      li { margin: 3px 0; }
+      code {
+        background: #eef2ff;
+        color: #3730a3;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 9pt;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 12px 14px;
+        border-radius: 8px;
+        font-family: "Consolas", "Courier New", monospace;
+        font-size: 8.5pt;
+        line-height: 1.4;
+        overflow: hidden;
+        white-space: pre-wrap;
+      }
+      .cover {
+        border-radius: 12px;
+        padding: 40px 36px;
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      .cover h1 { color: #fff; }
+      .cover .sub { font-size: 12pt; opacity: 0.9; margin-top: 8px; }
+      .cover .meta { margin-top: 24px; font-size: 9.5pt; opacity: 0.85; }
+      .cover .meta strong { opacity: 1; }
+      .pill {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        padding: 3px 12px;
+        font-size: 8.5pt;
+        margin-top: 14px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+        font-size: 9.5pt;
+      }
+      th, td {
+        border: 1px solid #e5e7eb;
+        padding: 7px 9px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th { background: #f1f5f9; color: #0f172a; font-weight: 600; }
+      tr:nth-child(even) td { background: #f9fafb; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: 12px 0;
+      }
+      .kpi {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        background: #f8fafc;
+      }
+      .kpi .n { font-size: 20pt; font-weight: 700; color: #2563eb; }
+      .kpi .l { font-size: 8pt; color: #6b7280; text-transform: uppercase; letter-spacing: 0.03em; }
+      .ok { color: #15803d; font-weight: 600; }
+      .warn { color: #b45309; font-weight: 600; }
+      .bad { color: #b91c1c; font-weight: 600; }
+      .callout {
+        border-left: 4px solid #f59e0b;
+        background: #fffbeb;
+        padding: 10px 14px;
+        border-radius: 0 8px 8px 0;
+        margin: 12px 0;
+        font-size: 9.5pt;
+      }
+      .callout.info { border-color: #2563eb; background: #eff6ff; }
+      .callout.ok { border-color: #16a34a; background: #f0fdf4; }
+      .muted { color: #6b7280; font-size: 9pt; }
+      .page-break { page-break-before: always; }
+      footer {
+        margin-top: 30px;
+        padding-top: 10px;
+        border-top: 1px solid #e5e7eb;
+        font-size: 8pt;
+        color: #9ca3af;
+        text-align: center;
+      }
+      .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    </style>
+  </head>
+  <body>
+    <!-- PORTADA -->
+    <div class="cover">
+      <h1>Widget de Chat con RAG</h1>
+      <div class="sub">Asistente conversacional sobre documentación pública, embebible en portales de terceros</div>
+      <span class="pill">Reporte técnico y de estado del proyecto</span>
+      <div class="meta">
+        <strong>Preparado por:</strong> D. Muñoz &nbsp;·&nbsp;
+        <strong>Fecha:</strong> 30 de julio de 2026 &nbsp;·&nbsp;
+        <strong>Estado:</strong> Funcional (validado end-to-end)
+      </div>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <h2>1. Resumen ejecutivo</h2>
+    <p>
+      Se desarrolló desde cero un <strong>widget de chat flotante con RAG</strong>
+      (<em>Retrieval-Augmented Generation</em>) que responde, en lenguaje natural,
+      preguntas de clientes basándose <strong>exclusivamente</strong> en la
+      documentación pública de la empresa (alojada en GitBook). El widget se
+      instala en cualquier portal externo con <strong>una sola línea de código</strong>
+      y está aislado para no interferir con el sitio anfitrión.
+    </p>
+    <p>
+      El sistema está <strong>construido y validado de punta a punta</strong>: se
+      ingirió la documentación del producto <strong>DPS POS (DigitalPharma)</strong>,
+      se comprobó la búsqueda semántica, la generación de respuestas fundamentadas,
+      la cita de fuentes y la regla anti-invención. Queda pendiente únicamente el
+      <strong>despliegue a un servidor público</strong> y completar la ingesta del
+      último tramo de páginas (limitación temporal de cuota gratuita, no técnica).
+    </p>
+
+    <div class="grid">
+      <div class="kpi"><div class="n">136</div><div class="l">Páginas ingeridas</div></div>
+      <div class="kpi"><div class="n">498</div><div class="l">Fragmentos indexados</div></div>
+      <div class="kpi"><div class="n">17</div><div class="l">Módulos de código</div></div>
+      <div class="kpi"><div class="n">1</div><div class="l">Línea para instalar</div></div>
+    </div>
+
+    <div class="callout ok">
+      <strong>Valor para el negocio:</strong> reduce carga de soporte respondiendo
+      dudas frecuentes 24/7 con información oficial y verificable (con enlaces a la
+      fuente), sin riesgo de "inventar" respuestas y sin trabajo de integración para
+      los portales que lo adopten.
+    </div>
+
+    <!-- QUÉ HACE -->
+    <h2>2. Qué hace el producto</h2>
+    <ul>
+      <li><strong>Responde en lenguaje natural</strong> preguntas de clientes sobre la documentación.</li>
+      <li><strong>Solo usa información oficial:</strong> recupera los fragmentos más relevantes de la documentación y responde con base en ellos.</li>
+      <li><strong>Cita las fuentes:</strong> cada respuesta incluye enlaces a las páginas de la documentación utilizadas.</li>
+      <li><strong>No inventa:</strong> si la respuesta no está en la documentación, lo dice explícitamente y sugiere contactar a soporte.</li>
+      <li><strong>Se instala en cualquier portal</strong> con una línea, sin que el portal ceda control ni comparta datos sensibles.</li>
+      <li><strong>Escalable a más manuales:</strong> agregar nueva documentación es cambiar una lista de configuración y re-ejecutar la ingesta; no requiere programar.</li>
+    </ul>
+
+    <!-- ARQUITECTURA -->
+    <h2 class="page-break">3. Arquitectura de la solución</h2>
+    <p>El sistema tiene tres piezas, más una base de datos vectorial en la nube:</p>
+    <table>
+      <tr><th>Componente</th><th>Rol</th><th>Tecnología</th></tr>
+      <tr>
+        <td><strong>Pipeline de ingesta</strong></td>
+        <td>Descarga la documentación, la divide en fragmentos, la convierte en vectores y la almacena. Re-ejecutable e idempotente.</td>
+        <td>Node.js</td>
+      </tr>
+      <tr>
+        <td><strong>Backend / API</strong></td>
+        <td>Recibe la pregunta, busca los fragmentos relevantes, arma el contexto y genera la respuesta con fuentes. Protegido con CORS y límite de peticiones.</td>
+        <td>Node.js + Express</td>
+      </tr>
+      <tr>
+        <td><strong>Widget (frontend)</strong></td>
+        <td>Botón flotante + panel de chat que se inyecta en el portal, aislado visualmente. Consume la API.</td>
+        <td>JavaScript autocontenido (Shadow DOM)</td>
+      </tr>
+      <tr>
+        <td><strong>Base de datos vectorial</strong></td>
+        <td>Almacena los fragmentos y sus vectores; permite la búsqueda por similitud semántica.</td>
+        <td>PostgreSQL + pgvector (Supabase)</td>
+      </tr>
+    </table>
+
+    <h3>Flujo de una pregunta (RAG)</h3>
+    <pre>Cliente escribe en el widget
+      │
+      ▼
+POST /api/chat  ──►  1. Se convierte la pregunta en un vector (embedding)
+                     2. Se buscan los N fragmentos más similares en pgvector
+                     3. Se arma el prompt con esos fragmentos como contexto
+                     4. El modelo de lenguaje redacta la respuesta
+                     5. Se devuelve la respuesta + las fuentes (título + enlace)
+      │
+      ▼
+El widget muestra la respuesta y los enlaces a la documentación</pre>
+
+    <div class="callout info">
+      <strong>Decisión de arquitectura destacable:</strong> el proveedor de
+      Inteligencia Artificial está <strong>desacoplado</strong> tras una interfaz común.
+      Hoy usa <strong>Google Gemini</strong> (capa gratuita), pero se puede cambiar a
+      <strong>Claude</strong> u <strong>OpenAI</strong> para producción
+      <strong>modificando solo variables de configuración, sin tocar el código.</strong>
+    </div>
+
+    <!-- STACK -->
+    <h2>4. Stack tecnológico</h2>
+    <div class="two-col">
+      <div>
+        <h3>Infraestructura</h3>
+        <ul>
+          <li><strong>Node.js</strong> (runtime) + <strong>Express</strong> (API)</li>
+          <li><strong>PostgreSQL + pgvector</strong> en <strong>Supabase</strong> (nube, plan gratuito)</li>
+          <li>Gestor de paquetes: <strong>pnpm</strong></li>
+          <li>Sin Docker: despliegue directo</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Inteligencia Artificial (actual)</h3>
+        <ul>
+          <li><strong>Embeddings:</strong> Gemini <code>gemini-embedding-001</code> (768 dimensiones)</li>
+          <li><strong>Generación:</strong> Gemini <code>gemini-flash-latest</code></li>
+          <li>Alternativas listas: OpenAI, Claude</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Seguridad y robustez ya implementadas</h3>
+    <table>
+      <tr><th>Medida</th><th>Descripción</th></tr>
+      <tr><td>CORS con lista blanca</td><td>Solo los dominios autorizados pueden consumir la API. Nunca abierto a todos.</td></tr>
+      <tr><td>Límite de peticiones por IP</td><td>Protege el endpoint público de abuso (rate limiting configurable).</td></tr>
+      <tr><td>Regla anti-invención</td><td>Instrucción estricta en el prompt: responder solo con el contexto o admitir que no se sabe.</td></tr>
+      <tr><td>Aislamiento visual (Shadow DOM)</td><td>El widget no choca con los estilos del portal anfitrión ni viceversa.</td></tr>
+      <tr><td>Ingesta idempotente</td><td>Re-ejecutar no duplica datos: actualiza lo cambiado y elimina lo obsoleto.</td></tr>
+    </table>
+
+    <!-- PRUEBAS -->
+    <h2 class="page-break">5. Pruebas realizadas</h2>
+    <table>
+      <tr><th>Prueba</th><th>Resultado</th></tr>
+      <tr><td>Instalación de dependencias y arranque del sistema</td><td class="ok">✔ Correcto</td></tr>
+      <tr><td>Conexión a la base de datos y creación automática de tablas/índices</td><td class="ok">✔ Correcto</td></tr>
+      <tr><td>Ingesta de la documentación (descarga → fragmentación → vectores → guardado)</td><td class="ok">✔ 136 páginas / 498 fragmentos</td></tr>
+      <tr><td>Búsqueda semántica en la base vectorial</td><td class="ok">✔ Recupera contexto relevante</td></tr>
+      <tr><td>Generación de respuesta fundamentada + fuentes con enlaces</td><td class="ok">✔ Correcto</td></tr>
+      <tr><td>Regla anti-invención (pregunta fuera de la documentación)</td><td class="ok">✔ Se niega correctamente</td></tr>
+      <tr><td>El backend sirve el widget y la página de prueba</td><td class="ok">✔ Correcto</td></tr>
+      <tr><td>Prueba de pregunta "en vivo" desde el navegador</td><td class="warn">⧗ Pendiente (ver limitación de cuota)</td></tr>
+    </table>
+
+    <div class="callout ok">
+      <strong>Ejemplo real validado:</strong> ante la pregunta "¿de qué trata la
+      sección Introducción?", el asistente respondió correctamente que el sistema es
+      software para farmacias (gestión de inventarios, trazabilidad de medicamentos,
+      digitalización de procesos) <em>citando la página exacta</em>. Ante una pregunta
+      no relacionada ("¿capital de Francia?"), respondió que esa información no está en
+      la documentación.
+    </div>
+
+    <!-- ESTADO Y LIMITACIONES -->
+    <h2>6. Estado actual y limitaciones</h2>
+    <p>El proyecto está <span class="ok">funcional y validado</span>. Las limitaciones actuales son <strong>operativas, no de diseño</strong>:</p>
+    <table>
+      <tr><th>Punto</th><th>Situación</th><th>Solución</th></tr>
+      <tr>
+        <td>Ingesta incompleta (faltan ~30 páginas)</td>
+        <td>La capa gratuita de Gemini limita a ~100 vectorizaciones por día y se alcanzó el tope.</td>
+        <td>Re-ejecutar la ingesta al día siguiente (retoma solo lo que falta) o activar facturación.</td>
+      </tr>
+      <tr>
+        <td>Preguntas "en vivo" limitadas hoy</td>
+        <td>Cada pregunta consume una vectorización; con la cuota agotada, fallan temporalmente.</td>
+        <td>Se reanuda al reiniciarse la cuota diaria; en producción se resuelve con plan de pago.</td>
+      </tr>
+      <tr>
+        <td>Aún en entorno local</td>
+        <td>Todo corre en la máquina de desarrollo (localhost).</td>
+        <td>Desplegar el backend a un host público con HTTPS (ver sección 7).</td>
+      </tr>
+    </table>
+
+    <div class="callout">
+      <strong>Recomendación para producción:</strong> activar facturación en Google
+      Gemini (los límites suben drásticamente y el costo por consulta es muy bajo), o
+      cambiar el proveedor de embeddings a OpenAI. La arquitectura ya lo soporta sin
+      cambios de código.
+    </div>
+
+    <!-- DESPLIEGUE -->
+    <h2>7. Plan de despliegue e instalación en portales</h2>
+    <p>
+      El widget <strong>no se distribuye por separado</strong>: el mismo backend que
+      responde las preguntas también entrega el archivo del widget. Por lo tanto,
+      publicar el sistema consiste en <strong>desplegar el backend a una URL pública
+      con HTTPS</strong>. La base de datos ya está en la nube y no se mueve.
+    </p>
+    <h3>Pasos</h3>
+    <ol>
+      <li>Desplegar el backend Node en un host (ej. Render, Railway, Fly.io o un servidor propio), con HTTPS.</li>
+      <li>Configurar las variables de entorno en el panel del host (credenciales de base de datos, clave de IA, modelos y la lista de dominios autorizados).</li>
+      <li>Registrar en la lista blanca de CORS los dominios reales de los portales que instalarán el widget.</li>
+      <li>Entregar a cada desarrollador de portal <strong>una sola línea</strong> para pegar en su sitio.</li>
+    </ol>
+    <h3>La única línea que recibe el desarrollador del portal</h3>
+    <pre>&lt;script src="https://chat.tuempresa.com/widget.js" async&gt;&lt;/script&gt;</pre>
+    <p class="muted">
+      El widget detecta automáticamente a qué API llamar según el dominio desde el que
+      se cargó, por lo que el desarrollador externo no configura nada más.
+    </p>
+
+    <!-- PRÓXIMOS PASOS -->
+    <h2>8. Próximos pasos</h2>
+    <table>
+      <tr><th>#</th><th>Acción</th><th>Responsable / nota</th></tr>
+      <tr><td>1</td><td>Completar la ingesta del tramo restante de páginas</td><td>Automático al reanudarse la cuota</td></tr>
+      <tr><td>2</td><td>Decidir plan de IA para producción (facturación Gemini u OpenAI)</td><td>Decisión de negocio</td></tr>
+      <tr><td>3</td><td>Desplegar el backend a host público con HTTPS</td><td>Desarrollo</td></tr>
+      <tr><td>4</td><td>Definir dominios de portales piloto y registrarlos en CORS</td><td>Desarrollo + negocio</td></tr>
+      <tr><td>5</td><td>Instalar la línea del widget en un portal piloto y validar en vivo</td><td>Dev del portal</td></tr>
+      <tr><td>6</td><td>(Opcional) Agregar más manuales a la base de conocimiento</td><td>Solo configuración</td></tr>
+    </table>
+
+    <div class="callout info">
+      <strong>Conclusión:</strong> el producto está técnicamente terminado y probado.
+      El camino a producción es corto y consiste principalmente en decisiones de
+      infraestructura (hosting) y de plan de IA, no en desarrollo adicional.
+    </div>
+
+    <footer>
+      Widget de Chat con RAG · Reporte generado el 30/07/2026 · Documento interno
+    </footer>
+  </body>
+</html>

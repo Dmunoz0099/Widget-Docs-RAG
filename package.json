@@ -1,0 +1,22 @@
+{
+  "name": "widget-docs-rag",
+  "version": "1.0.0",
+  "description": "Widget de chat flotante con RAG sobre documentacion publica (GitBook llms.txt) usando pgvector + Gemini.",
+  "type": "module",
+  "packageManager": "pnpm@11.3.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "ingest": "node src/ingest/run.js",
+    "start": "node src/server/index.js",
+    "dev": "node --watch src/server/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "pg": "^8.13.1"
+  }
+}
