@@ -26,6 +26,16 @@ export function buildUserMessage({ question, chunks }) {
   return `CONTEXTO:\n${context}\n\n---\n\nPREGUNTA DEL CLIENTE:\n${question}`;
 }
 
+/**
+ * Convierte la URL del Markdown crudo (lo que se ingesta) a la URL de la pagina
+ * legible de GitBook, que es la util para el usuario final.
+ *   .../transbank/webpay.md  ->  .../transbank/webpay
+ * En GitBook la pagina HTML es la misma ruta sin la extension ".md".
+ */
+export function toPageUrl(mdUrl) {
+  return mdUrl.replace(/\.md(?=$|[?#])/, '');
+}
+
 /** Deduplica las fuentes (titulo + url) preservando el orden. */
 export function collectSources(chunks) {
   const seen = new Set();
@@ -34,7 +44,7 @@ export function collectSources(chunks) {
     const key = c.source_url;
     if (seen.has(key)) continue;
     seen.add(key);
-    sources.push({ title: c.title, url: c.source_url });
+    sources.push({ title: c.title, url: toPageUrl(c.source_url) });
   }
   return sources;
 }
