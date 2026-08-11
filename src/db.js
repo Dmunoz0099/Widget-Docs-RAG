@@ -45,10 +45,13 @@ export async function initSchema() {
       )
     `);
 
+    // HNSW en vez de ivfflat: alto recall sin tener que tunear "probes", y se
+    // comporta bien tanto con pocos cientos de vectores como al crecer el corpus.
+    // (ivfflat con lists altas sobre pocas filas hunde el recall: solo escanea
+    //  una fraccion de las listas con probes=1.)
     await client.query(`
       CREATE INDEX IF NOT EXISTS doc_chunks_embedding_idx
-        ON doc_chunks USING ivfflat (embedding vector_cosine_ops)
-        WITH (lists = 100)
+        ON doc_chunks USING hnsw (embedding vector_cosine_ops)
     `);
 
     await client.query(`
