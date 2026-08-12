@@ -36,15 +36,12 @@ export function toPageUrl(mdUrl) {
   return mdUrl.replace(/\.md(?=$|[?#])/, '');
 }
 
-/** Deduplica las fuentes (titulo + url) preservando el orden. */
+/**
+ * Devuelve solo la fuente mas relevante (titulo + url).
+ * Los chunks llegan ordenados por similitud, asi que el primero es el mejor.
+ */
 export function collectSources(chunks) {
-  const seen = new Set();
-  const sources = [];
-  for (const c of chunks) {
-    const key = c.source_url;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    sources.push({ title: c.title, url: toPageUrl(c.source_url) });
-  }
-  return sources;
+  const top = chunks[0];
+  if (!top) return [];
+  return [{ title: top.title, url: toPageUrl(top.source_url) }];
 }
