@@ -217,7 +217,7 @@
     .empty { text-align: center; color: var(--wg-muted); font-size: 13px; padding: 40px 20px; }
 
     .newconvo-wrap {
-      position: absolute; left: 0; right: 0; bottom: 52px; padding: 12px 16px;
+      position: absolute; left: 0; right: 0; bottom: 40px; padding: 12px 16px;
       background: linear-gradient(to top, var(--wg-soft) 70%, transparent);
     }
     .newconvo {

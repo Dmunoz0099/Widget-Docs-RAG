@@ -66,8 +66,11 @@ export async function chatHandler(req, res) {
     const userName = (req.body?.userName || '').toString().trim() || null;
     const origin = req.headers.origin || null;
 
+    // conversationId puede llegar como number o como string (pg devuelve los
+    // BIGINT como string, y el widget lo reenvia tal cual). Se coacciona a entero.
     let conversationId = req.body?.conversationId;
-    conversationId = Number.isInteger(conversationId) ? conversationId : null;
+    conversationId = conversationId == null ? null : Number.parseInt(conversationId, 10);
+    if (!Number.isInteger(conversationId)) conversationId = null;
 
     // Si viene conversationId, valida que sea del usuario; si no, se ignora.
     if (conversationId && !(await conversationBelongsTo(conversationId, userId))) {
@@ -130,7 +133,9 @@ export async function chatHandler(req, res) {
     await appendMessage({ conversationId, role: 'bot', content: answer, sources });
     await touchConversation(conversationId);
 
-    return res.json({ answer, sources, conversationId });
+    // Devuelve conversationId como number (createConversation lo trae como
+    // string desde pg) para que el round-trip con el widget sea consistente.
+    return res.json({ answer, sources, conversationId: Number(conversationId) });
   } catch (err) {
     console.error('Error en /api/chat:', err.message);
     return res.status(500).json({
