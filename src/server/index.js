@@ -2,10 +2,15 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config, assertProviderKeys } from '../config.js';
-import { pool } from '../db.js';
+import { pool, ensureChatSchema } from '../db.js';
 import { corsMiddleware } from './middleware/cors.js';
 import { chatRateLimiter } from './middleware/rateLimit.js';
 import { chatHandler } from './chat.js';
+import {
+  modulesHandler,
+  listConversationsHandler,
+  getConversationHandler,
+} from './conversations.js';
 
 // Falla temprano si faltan API keys del proveedor activo (chat + embeddings).
 assertProviderKeys();
@@ -43,6 +48,13 @@ app.get('/api/health', async (req, res) => {
 // Endpoint publico del chat, con rate limiting por IP.
 app.post('/api/chat', chatRateLimiter(), chatHandler);
 
+// Modulos disponibles para el selector "Modulo de la consulta".
+app.get('/api/modules', chatRateLimiter(), modulesHandler);
+
+// Historial de conversaciones por usuario.
+app.get('/api/conversations', chatRateLimiter(), listConversationsHandler);
+app.get('/api/conversations/:id', chatRateLimiter(), getConversationHandler);
+
 // Manejo de errores de CORS y otros.
 app.use((err, req, res, next) => {
   if (err?.message?.startsWith('Origen no permitido')) {
@@ -50,6 +62,12 @@ app.use((err, req, res, next) => {
   }
   console.error('Error no controlado:', err?.message);
   return res.status(500).json({ error: 'Error interno.' });
+});
+
+// Asegura las tablas del historial de chat antes de aceptar trafico.
+await ensureChatSchema().catch((e) => {
+  console.error('No se pudieron crear las tablas de chat:', e.message);
+  process.exit(1);
 });
 
 const server = app.listen(config.port, () => {

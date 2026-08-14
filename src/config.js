@@ -39,6 +39,25 @@ function listEnv(name, fallback = []) {
 
 const embeddingProvider = optional('EMBEDDING_PROVIDER', '') || optional('AI_PROVIDER', 'gemini');
 
+/**
+ * Parsea MODULE_LABELS ("dps-pos:Punto de Venta,otra:Otra") a un objeto
+ * { 'dps-pos': 'Punto de Venta', ... }. Sirve para el texto visible del selector
+ * de modulo. Los index_source sin etiqueta usan un "prettify" del slug.
+ */
+function mapEnv(name) {
+  const raw = process.env[name];
+  const out = {};
+  if (!raw || !raw.trim()) return out;
+  for (const pair of raw.split(',')) {
+    const idx = pair.indexOf(':');
+    if (idx === -1) continue;
+    const key = pair.slice(0, idx).trim();
+    const val = pair.slice(idx + 1).trim();
+    if (key && val) out[key] = val;
+  }
+  return out;
+}
+
 export const config = {
   databaseUrl: required('DATABASE_URL'),
 
@@ -67,6 +86,9 @@ export const config = {
   fetchDelayMs: intEnv('FETCH_DELAY_MS', 300),
   chunkSize: intEnv('CHUNK_SIZE', 1000),
   chunkOverlap: intEnv('CHUNK_OVERLAP', 150),
+
+  // Etiquetas legibles para el selector de modulo (index_source -> label).
+  moduleLabels: mapEnv('MODULE_LABELS'),
 
   // Servidor
   port: intEnv('PORT', 3000),

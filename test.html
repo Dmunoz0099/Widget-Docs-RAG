@@ -66,7 +66,24 @@
       Ajusta el host si tu backend corre en otro puerto/dominio.
       Como test.html se abre desde el mismo server (http://localhost:3000/test.html),
       data-api-url puede omitirse: el widget usa el origen desde el que se cargó.
+
+      Atributos de ejemplo:
+        · data-user-id / data-user-name  -> identidad que el portal ya conoce (saludo + historial)
+        · data-primary-color / data-accent-color / data-header-from / data-header-to -> paleta del portal
+        · data-docs-url  -> enlace a la documentación (menú "Centro de Ayuda" / "Artículos")
     -->
-    <script src="http://localhost:3000/widget.js" data-api-url="http://localhost:3000" async></script>
+    <script
+      src="http://localhost:3000/widget.js"
+      data-api-url="http://localhost:3000"
+      data-user-id="u123"
+      data-user-name="Diego"
+      data-primary-color="#0014DB"
+      data-accent-color="#000f8f"
+      data-header-from="#3a4df0"
+      data-header-to="#0014DB"
+      data-docs-url="https://docs.itam.app/dps-pos"
+      data-manual="dps-pos"
+      async
+    ></script>
   </body>
 </html>
