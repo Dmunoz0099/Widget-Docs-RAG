@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portal IMS (simulado) — Widget Docs RAG</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        color: #1f2937;
+        background: #f3f4f6;
+      }
+      header {
+        background: #0f291f;
+        color: #fff;
+        padding: 20px 32px;
+      }
+      main {
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px;
+        line-height: 1.6;
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .badge {
+        display: inline-block;
+        background: #0b8f5a;
+        color: #fff;
+        border-radius: 999px;
+        padding: 2px 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      code {
+        background: #e7f6ee;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 90%;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Portal IMS (simulado)</h1>
+    </header>
+    <main>
+      <div class="card">
+        <span class="badge">data-manual="ims"</span>
+        <h2>Este portal solo consulta la documentación de IMS</h2>
+        <p>
+          El widget está incrustado con <code>data-manual="ims"</code>, así que el
+          selector "Módulo de la consulta" debe mostrar <strong>solo</strong>
+          secciones de IMS (Inventory Management System) y las respuestas deben
+          citar únicamente páginas de <code>docs.itam.app/ims</code>.
+        </p>
+        <p>
+          Prueba una pregunta propia de IMS (inventario, stock, etc.) y verifica
+          que ninguna fuente venga de DPS POS.
+        </p>
+      </div>
+    </main>
+
+    <!--
+      Línea única que se le entrega al portal IMS.
+      Como esta página se sirve desde http://localhost:3000/test-ims.html,
+      data-api-url puede omitirse (el widget usa el origen desde el que se cargó).
+    -->
+    <script
+      src="http://localhost:3000/widget.js"
+      data-api-url="http://localhost:3000"
+      data-user-id="u-ims-001"
+      data-user-name="Diego"
+      data-primary-color="#0b8f5a"
+      data-accent-color="#07663f"
+      data-header-from="#12b56f"
+      data-header-to="#0b8f5a"
+      data-docs-url="https://docs.itam.app/ims"
+      data-manual="ims"
+      async
+    ></script>
+  </body>
+</html>

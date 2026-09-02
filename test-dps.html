@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Portal DPS POS (simulado) — Widget Docs RAG</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        margin: 0;
+        color: #1f2937;
+        background: #f3f4f6;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 20px 32px;
+      }
+      main {
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px;
+        line-height: 1.6;
+      }
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .badge {
+        display: inline-block;
+        background: #0014db;
+        color: #fff;
+        border-radius: 999px;
+        padding: 2px 12px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      code {
+        background: #eef2ff;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 90%;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Portal DPS POS (simulado)</h1>
+    </header>
+    <main>
+      <div class="card">
+        <span class="badge">data-manual="dps-pos"</span>
+        <h2>Este portal solo consulta la documentación de DPS POS</h2>
+        <p>
+          El widget está incrustado con <code>data-manual="dps-pos"</code>, así
+          que el selector "Módulo de la consulta" debe mostrar
+          <strong>solo</strong> secciones de DPS POS y las respuestas deben citar
+          únicamente páginas de <code>docs.itam.app/dps-pos</code>.
+        </p>
+        <p>
+          Prueba una pregunta propia de DPS POS (p. ej. sobre ventas, boletas o
+          Transbank) y verifica que ninguna fuente venga de IMS.
+        </p>
+      </div>
+    </main>
+
+    <!--
+      Línea única que se le entrega al portal DPS POS.
+      Como esta página se sirve desde http://localhost:3000/test-dps.html,
+      data-api-url puede omitirse (el widget usa el origen desde el que se cargó).
+    -->
+    <script
+      src="http://localhost:3000/widget.js"
+      data-api-url="http://localhost:3000"
+      data-user-id="u-dps-001"
+      data-user-name="Diego"
+      data-primary-color="#0014DB"
+      data-accent-color="#000f8f"
+      data-header-from="#3a4df0"
+      data-header-to="#0014DB"
+      data-docs-url="https://docs.itam.app/dps-pos"
+      data-manual="dps-pos"
+      async
+    ></script>
+  </body>
+</html>

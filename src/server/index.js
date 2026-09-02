@@ -34,6 +34,13 @@ app.use(express.static(path.resolve(__dirname, '../../public')));
 app.get('/test.html', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../../test.html'));
 });
+// Portales de prueba por manual (cada uno incrusta el widget con su data-manual).
+app.get('/test-dps.html', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../test-dps.html'));
+});
+app.get('/test-ims.html', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../test-ims.html'));
+});
 
 // Health check simple.
 app.get('/api/health', async (req, res) => {
