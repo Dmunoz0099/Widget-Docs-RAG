@@ -553,22 +553,40 @@
     showScreen('chat');
     hTitle.textContent = 'Nueva conversación';
     hSub.textContent = '';
-    loadModules().then(renderModuleCard);
+    // Renderiza la tarjeta al instante (evita el hueco en blanco mientras carga
+    // /api/modules) y rellena los modulos especificos cuando lleguen.
+    renderModuleCard(state.modules || []);
+    if (!state.modules) {
+      loadModules().then(function (mods) {
+        if (state.screen === 'chat' && !state.started) fillModuleOptions(mods);
+      });
+    }
+  }
+
+  function fillModuleOptions(modules) {
+    var sel = modSlot.querySelector('.modsel');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '<option value="">Todos los módulos</option>';
+    (modules || []).forEach(function (m) {
+      var o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.label;
+      sel.appendChild(o);
+    });
+    sel.value = current;
   }
 
   function renderModuleCard(modules) {
-    var options = '<option value="">Todos los módulos</option>';
-    (modules || []).forEach(function (m) {
-      options += '<option value="' + escapeHtml(m.id) + '">' + escapeHtml(m.label) + '</option>';
-    });
     modSlot.innerHTML =
       '<div class="modcard">' +
         '<h3>Módulo de la consulta</h3>' +
         '<p>Para darte la mejor respuesta, elige el módulo con el que necesitas ayuda. Luego escribe tu pregunta.</p>' +
         '<label>Módulo</label>' +
-        '<select class="modsel">' + options + '</select>' +
+        '<select class="modsel"><option value="">Todos los módulos</option></select>' +
         '<div class="row"><button class="next">Siguiente</button></div>' +
       '</div>';
+    fillModuleOptions(modules);
     var sel = modSlot.querySelector('.modsel');
     modSlot.querySelector('.next').addEventListener('click', function () {
       state.moduleId = sel.value || null;
