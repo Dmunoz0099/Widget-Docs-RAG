@@ -238,7 +238,32 @@
     .msg.user .bubble { background: var(--wg-primary); color: #fff; border-bottom-right-radius: 4px; }
     .msg.bot .bubble { background: var(--wg-bg); color: var(--wg-text); border: 1px solid var(--wg-border); border-bottom-left-radius: 4px; }
 
-    .sources { margin-top: 8px; font-size: 12px; }
+    /* Contenido Markdown renderizado (respuestas del bot) */
+    .md { white-space: normal; }
+    .md > :first-child { margin-top: 0; }
+    .md > :last-child { margin-bottom: 0; }
+    .md p { margin: 0 0 8px; }
+    .md h1, .md h2, .md h3, .md h4 { margin: 12px 0 6px; font-weight: 700; line-height: 1.3; }
+    .md h1 { font-size: 16px; }
+    .md h2 { font-size: 15px; }
+    .md h3, .md h4 { font-size: 14px; }
+    .md ul, .md ol { margin: 6px 0 8px; padding-left: 20px; }
+    .md ul { list-style: disc; }
+    .md li { margin: 4px 0; }
+    .md li::marker { color: var(--wg-primary); font-weight: 600; }
+    .md strong { font-weight: 700; }
+    .md em { font-style: italic; }
+    .md a { color: var(--wg-primary); text-decoration: underline; word-break: break-word; }
+    .md code { background: rgba(100, 116, 139, .14); padding: 1px 5px; border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+    .md pre { background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 8px;
+      overflow-x: auto; margin: 8px 0; }
+    .md pre code { background: none; padding: 0; color: inherit; }
+    .md hr { border: 0; border-top: 1px solid var(--wg-border); margin: 10px 0; }
+    .md blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--wg-primary);
+      color: var(--wg-muted); }
+
+    .sources { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--wg-border); font-size: 12px; }
     .sources .lbl { color: var(--wg-muted); margin-bottom: 4px; }
     .sources a { display: block; color: var(--wg-primary); text-decoration: none; margin-bottom: 2px; }
     .sources a:hover { text-decoration: underline; }
@@ -642,7 +667,10 @@
     el.className = 'msg bot';
     var b = document.createElement('div');
     b.className = 'bubble';
-    b.textContent = text;
+    var content = document.createElement('div');
+    content.className = 'md';
+    content.innerHTML = renderMarkdown(text);
+    b.appendChild(content);
     if (sources && sources.length) {
       var s = document.createElement('div');
       s.className = 'sources';
@@ -723,6 +751,103 @@
     return String(str)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // Formato en linea: escapa HTML primero (seguro contra inyeccion) y luego
+  // convierte codigo, enlaces, negritas y cursivas de Markdown.
+  function mdInline(s) {
+    s = escapeHtml(s);
+    s = s.replace(/`([^`]+)`/g, function (_, c) { return '<code>' + c + '</code>'; });
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    s = s.replace(/(^|[^\w])_([^_\n]+)_(?=[^\w]|$)/g, '$1<em>$2</em>');
+    return s;
+  }
+
+  // Mini-renderer de Markdown por bloques: encabezados, listas ordenadas y con
+  // vinetas, bloques de codigo, citas, separadores y parrafos. Es intencionalmente
+  // pequeno; NO usa innerHTML sin escapar (todo pasa por escapeHtml en mdInline).
+  function renderMarkdown(src) {
+    var text = String(src == null ? '' : src).replace(/\r\n?/g, '\n');
+
+    // Protege bloques de codigo ``` ``` antes de procesar por linea.
+    var codeBlocks = [];
+    text = text.replace(/```[^\n]*\n?([\s\S]*?)```/g, function (_, code) {
+      codeBlocks.push(code.replace(/\n$/, ''));
+      return ' C' + (codeBlocks.length - 1) + ' ';
+    });
+
+    var lines = text.split('\n');
+    var html = '';
+    var i = 0;
+    var UL = /^\s*[-*+]\s+/, OL = /^\s*\d+[.)]\s+/, BLANK = /^\s*$/;
+
+    while (i < lines.length) {
+      var line = lines[i];
+
+      if (BLANK.test(line)) { i++; continue; }
+
+      var cm = line.match(/^ C(\d+) \s*$/);
+      if (cm) { html += '<pre><code>' + escapeHtml(codeBlocks[+cm[1]]) + '</code></pre>'; i++; continue; }
+
+      var hr = /^\s*([-*_])\1\1+\s*$/;
+      if (hr.test(line)) { html += '<hr>'; i++; continue; }
+
+      var hm = line.match(/^\s*(#{1,6})\s+(.*)$/);
+      if (hm) {
+        var lvl = Math.min(hm[1].length, 6);
+        html += '<h' + lvl + '>' + mdInline(hm[2].trim()) + '</h' + lvl + '>';
+        i++; continue;
+      }
+
+      if (/^\s*>\s?/.test(line)) {
+        var quote = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          quote.push(lines[i].replace(/^\s*>\s?/, '')); i++;
+        }
+        html += '<blockquote>' + mdInline(quote.join('\n')).replace(/\n/g, '<br>') + '</blockquote>';
+        continue;
+      }
+
+      if (OL.test(line) || UL.test(line)) {
+        var ordered = OL.test(line);
+        var re = ordered ? OL : UL;
+        html += ordered ? '<ol>' : '<ul>';
+        while (i < lines.length) {
+          if (re.test(lines[i])) {
+            var item = lines[i].replace(re, '');
+            i++;
+            // Continuacion: lineas sueltas bajo el item (descripcion que sigue en
+            // la linea siguiente) se agregan al mismo <li> en vez de partir la lista.
+            while (i < lines.length && !BLANK.test(lines[i]) && !UL.test(lines[i])
+                && !OL.test(lines[i]) && !/^\s*(#{1,6})\s+/.test(lines[i])
+                && !/^\s*>\s?/.test(lines[i]) && !/^ C\d+ \s*$/.test(lines[i])) {
+              item += '\n' + lines[i]; i++;
+            }
+            html += '<li>' + mdInline(item).replace(/\n/g, '<br>') + '</li>';
+          } else if (BLANK.test(lines[i]) && lines[i + 1]
+              && (OL.test(lines[i + 1]) || UL.test(lines[i + 1]))) {
+            i++; // linea en blanco entre items
+          } else break;
+        }
+        html += ordered ? '</ol>' : '</ul>';
+        continue;
+      }
+
+      // Parrafo: junta lineas consecutivas que no abran otro bloque.
+      var para = [];
+      while (i < lines.length && !BLANK.test(lines[i]) && !UL.test(lines[i]) && !OL.test(lines[i])
+          && !/^\s*(#{1,6})\s+/.test(lines[i]) && !/^\s*>\s?/.test(lines[i])
+          && !/^ C\d+ \s*$/.test(lines[i])) {
+        para.push(lines[i]); i++;
+      }
+      if (para.length) html += '<p>' + mdInline(para.join('\n')).replace(/\n/g, '<br>') + '</p>';
+    }
+
+    return html;
   }
 
   // --- Eventos ---------------------------------------------------------------
