@@ -268,6 +268,19 @@
     .sources a { display: block; color: var(--wg-primary); text-decoration: none; margin-bottom: 2px; }
     .sources a:hover { text-decoration: underline; }
 
+    /* Opciones de clarificacion clicables (bajo una respuesta del bot) */
+    .options { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .options.done { opacity: .55; pointer-events: none; }
+    .opt {
+      width: 100%; text-align: left; cursor: pointer; font-family: inherit;
+      background: color-mix(in srgb, var(--wg-primary) 8%, #fff);
+      border: 1px solid color-mix(in srgb, var(--wg-primary) 32%, #fff);
+      color: var(--wg-primary); border-radius: 10px; padding: 9px 12px;
+      font-size: 13.5px; font-weight: 600; line-height: 1.3;
+      transition: background .12s ease;
+    }
+    .opt:hover { background: color-mix(in srgb, var(--wg-primary) 16%, #fff); }
+
     .typing { display: inline-flex; gap: 4px; }
     .typing span { width: 6px; height: 6px; border-radius: 50%; background: #9ca3af; animation: blink 1.2s infinite; }
     .typing span:nth-child(2) { animation-delay: .2s; }
@@ -662,7 +675,7 @@
     scrollDown();
   }
 
-  function addBot(text, sources) {
+  function addBot(text, sources, options) {
     var el = document.createElement('div');
     el.className = 'msg bot';
     var b = document.createElement('div');
@@ -671,6 +684,24 @@
     content.className = 'md';
     content.innerHTML = renderMarkdown(text);
     b.appendChild(content);
+    // Opciones de clarificacion: botones que, al pulsarse, se envian como la
+    // siguiente pregunta. Se deshabilitan una vez elegida una para evitar
+    // dobles envios.
+    if (options && options.length) {
+      var opts = document.createElement('div');
+      opts.className = 'options';
+      options.forEach(function (opt) {
+        var btn = document.createElement('button');
+        btn.className = 'opt';
+        btn.textContent = opt;
+        btn.addEventListener('click', function () {
+          opts.classList.add('done');
+          submitQuestion(opt);
+        });
+        opts.appendChild(btn);
+      });
+      b.appendChild(opts);
+    }
     if (sources && sources.length) {
       var s = document.createElement('div');
       s.className = 'sources';
@@ -709,12 +740,21 @@
     textarea.disabled = busy;
   }
 
+  // Envia desde el textarea (Enter o boton "Enviar").
   function send() {
     var q = textarea.value.trim();
     if (!q || state.busy) return;
-    addUser(q);
     textarea.value = '';
     textarea.style.height = 'auto';
+    submitQuestion(q);
+  }
+
+  // Envia una pregunta al backend. Lo usan tanto el textarea como los botones
+  // de opciones de clarificacion.
+  function submitQuestion(q) {
+    q = (q || '').trim();
+    if (!q || state.busy) return;
+    addUser(q);
     setBusy(true);
     var typing = addTyping();
 
@@ -735,7 +775,7 @@
         typing.remove();
         state.conversationId = data.conversationId || state.conversationId;
         state.convosDirty = true; // la lista de conversaciones cambio
-        addBot(data.answer || 'Sin respuesta.', data.sources);
+        addBot(data.answer || 'Sin respuesta.', data.sources, data.options);
       })
       .catch(function () {
         typing.remove();
@@ -854,7 +894,13 @@
   function togglePanel(open) {
     var show = open === undefined ? !panel.classList.contains('open') : open;
     panel.classList.toggle('open', show);
-    if (show && state.screen === 'home') renderMenu();
+    if (show) {
+      // Precarga los modulos apenas se abre el widget para que ya esten en
+      // cache (state.modules) al entrar a "Nueva conversacion". Evita que el
+      // selector aparezca solo con "Todos los modulos" la primera vez.
+      loadModules();
+      if (state.screen === 'home') renderMenu();
+    }
   }
 
   fab.addEventListener('click', function () { togglePanel(); });

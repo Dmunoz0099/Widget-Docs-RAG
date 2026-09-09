@@ -8,7 +8,7 @@ import {
   getDistinctModules,
 } from '../db.js';
 import { getChatProvider, getEmbeddingProvider } from '../providers/index.js';
-import { SYSTEM_PROMPT, buildUserMessage, collectSources } from './prompt.js';
+import { SYSTEM_PROMPT, buildUserMessage, collectSources, splitAnswerOptions } from './prompt.js';
 
 // Cache en memoria de los index_source conocidos (manuales ingestados).
 // Sirve para decidir si el "modulo" seleccionado es un filtro real de BD o solo
@@ -108,14 +108,20 @@ export async function chatHandler(req, res) {
     // Sin contexto recuperado -> no llamamos al LLM; respondemos la regla critica.
     let answer;
     let sources = [];
+    // Opciones de clarificacion clicables (p.ej. tipos de egreso). Se derivan del
+    // marcador [[OPCIONES]] que el LLM agrega cuando la pregunta es general.
+    let options = [];
     if (!chunks.length) {
       answer =
         'Esa informacion no esta en la documentacion disponible. Te sugiero contactar al equipo de soporte.';
     } else {
       const userMessage = buildUserMessage({ question, chunks });
       const chat = getChatProvider();
-      answer = await chat.generate({ system: SYSTEM_PROMPT, user: userMessage });
-      sources = collectSources(chunks);
+      const raw = await chat.generate({ system: SYSTEM_PROMPT, user: userMessage });
+      ({ answer, options } = splitAnswerOptions(raw));
+      // En una pregunta de clarificacion las fuentes distraen; se muestran solo
+      // cuando el bot da una respuesta de contenido real.
+      sources = options.length ? [] : collectSources(chunks);
     }
 
     // Persiste la conversacion. Crea una nueva si no habia conversationId valido.
@@ -135,7 +141,8 @@ export async function chatHandler(req, res) {
 
     // Devuelve conversationId como number (createConversation lo trae como
     // string desde pg) para que el round-trip con el widget sea consistente.
-    return res.json({ answer, sources, conversationId: Number(conversationId) });
+    // `options` (si las hay) son botones de clarificacion que pinta el widget.
+    return res.json({ answer, sources, options, conversationId: Number(conversationId) });
   } catch (err) {
     console.error('Error en /api/chat:', err.message);
     return res.status(500).json({

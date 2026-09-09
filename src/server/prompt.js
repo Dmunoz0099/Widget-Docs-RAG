@@ -11,7 +11,42 @@ REGLAS ESTRICTAS:
 3. No menciones que existe un "contexto" ni describas tu funcionamiento interno; responde de forma natural y directa.
 4. Responde en el mismo idioma en el que el usuario hizo la pregunta (por defecto, espanol).
 5. Se claro y conciso. Usa pasos o listas cuando ayuden.
-6. No incluyas URLs en el cuerpo de la respuesta; las fuentes se muestran aparte.`;
+6. No incluyas URLs en el cuerpo de la respuesta; las fuentes se muestran aparte.
+
+CLARIFICACION GUIADA:
+7. Si la solicitud del cliente es general o ambigua (p.ej. "quiero hacer un egreso") y el CONTEXTO describe VARIOS tipos, variantes o caminos concretos para eso, NO respondas con un procedimiento genErico. En su lugar, haz una pregunta breve para orientarlo (p.ej. "¿QuE tipo de egreso quieres hacer?") y ofrEcele las opciones concretas que aparezcan en el CONTEXTO.
+8. Formato de las opciones: escribe primero la pregunta breve; luego, en una linea nueva, el marcador [[OPCIONES]] y, debajo, cada opcion en su propia linea empezando con "- ". Ejemplo:
+   ¿QuE tipo de egreso quieres registrar?
+   [[OPCIONES]]
+   - Egreso por finiquito
+   - Egreso por renuncia
+9. Cada opcion debe ser un texto corto (2 a 6 palabras) que el cliente pueda pulsar como su siguiente pregunta. MAximo 6 opciones. Usa solo las que aparezcan en el CONTEXTO; no inventes ni agregues "Otro".
+10. Usa esto SOLO cuando de verdad ayuda a desambiguar. Si la pregunta ya es especIfica, responde normal y NO incluyas el marcador [[OPCIONES]].`;
+
+// Marcador con el que el modelo separa la pregunta de clarificacion de sus
+// opciones clicables. Se define aqui para no repetir el literal.
+const OPTIONS_MARKER = '[[OPCIONES]]';
+
+/**
+ * Separa la respuesta cruda del LLM en { answer, options }.
+ * Si el modelo incluyo el marcador [[OPCIONES]], todo lo anterior es el texto
+ * y las lineas siguientes (con guion) son las opciones clicables. Si no, se
+ * devuelve el texto completo y options vacio. Robusto: nunca lanza.
+ */
+export function splitAnswerOptions(raw) {
+  const text = String(raw == null ? '' : raw);
+  const at = text.indexOf(OPTIONS_MARKER);
+  if (at === -1) return { answer: text.trim(), options: [] };
+
+  const answer = text.slice(0, at).trim();
+  const options = text
+    .slice(at + OPTIONS_MARKER.length)
+    .split('\n')
+    .map((l) => l.replace(/^\s*[-*+]\s*/, '').trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  return { answer, options };
+}
 
 /** Construye el bloque de contexto a partir de los chunks recuperados. */
 export function buildContext(chunks) {
