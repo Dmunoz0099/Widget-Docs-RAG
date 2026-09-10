@@ -5,10 +5,16 @@ import {
   appendMessage,
   touchConversation,
   conversationBelongsTo,
+  getConversationMessages,
+  getPageChunks,
   getDistinctModules,
 } from '../db.js';
 import { getChatProvider, getEmbeddingProvider } from '../providers/index.js';
+import { isBoilerplate } from '../ingest/chunk.js';
 import { SYSTEM_PROMPT, buildUserMessage, collectSources, splitAnswerOptions } from './prompt.js';
+
+// Cuantas paginas distintas de los resultados se expanden a pagina completa.
+const EXPAND_PAGES = 3;
 
 // Cache en memoria de los index_source conocidos (manuales ingestados).
 // Sirve para decidir si el "modulo" seleccionado es un filtro real de BD o solo
@@ -77,19 +83,37 @@ export async function chatHandler(req, res) {
       conversationId = null;
     }
 
+    // Hilo previo de la conversacion (turnos ya guardados; el mensaje actual aun
+    // no se persiste). Sirve para: (a) enriquecer la query de recuperacion —un
+    // clic en una opcion como "Factura (FAC)" no tiene sentido aislado— y (b) dar
+    // contexto al LLM para que entienda a que se refiere la pregunta corta.
+    let history = [];
+    if (conversationId) {
+      history = (await getConversationMessages(conversationId, userId)) || [];
+    }
+
     // El modulo puede ser: (a) una seccion de un manual (id = prefijo URL)
     // -> filtro por prefijo; (b) un manual completo (id = index_source)
     // -> filtro por index_source; (c) un modulo no ingestado (p.ej. funcional
     // del portal) -> pista semantica que enriquece la consulta sin filtrar.
     let filter = null;
+    // Query de recuperacion: combina las ultimas preguntas del usuario con la
+    // actual para no perder el hilo (pedido -> Compra Directa -> Factura).
     let queryText = question;
+    const priorUser = history
+      .filter((m) => m.role === 'user')
+      .map((m) => (m.content || '').trim())
+      .filter(Boolean)
+      .slice(-3);
+    if (priorUser.length) queryText = priorUser.join(' ') + ' ' + question;
+
     if (moduleId) {
       if (/^https?:\/\//i.test(moduleId)) {
         filter = { sectionPrefix: moduleId };
       } else {
         const known = await getKnownModules();
         if (known.has(moduleId)) filter = { indexSource: moduleId };
-        else queryText = `[Módulo: ${moduleLabel || moduleId}] ${question}`;
+        else queryText = `[Módulo: ${moduleLabel || moduleId}] ${queryText}`;
       }
     }
     // Sin seccion concreta pero con manual del portal -> acota al manual.
@@ -105,6 +129,36 @@ export async function chatHandler(req, res) {
       chunks = await searchSimilar(queryEmbedding, config.ragTopN, null);
     }
 
+    // Descarta el boilerplate de GitBook que sigue en la BD de ingestas previas
+    // (Agent Instructions, "Querying This Documentation", cabecera llms.txt).
+    chunks = chunks.filter((c) => !isBoilerplate(c.content));
+
+    // Reconstruye el paso a paso completo. El troceado (~CHUNK_SIZE) parte un
+    // procedimiento en varios chunks y top-N no siempre los trae todos. Ademas,
+    // el detalle suele vivir en su propia pagina (p.ej. "Merma"), que no siempre
+    // es el top-1 (una pagina resumen como "Nuevo Egreso" puede ganar). Por eso
+    // expandimos a pagina COMPLETA las primeras EXPAND_PAGES paginas distintas
+    // que aparezcan en los resultados, en orden de relevancia.
+    if (chunks.length) {
+      const orderedUrls = [];
+      const seen = new Set();
+      for (const c of chunks) {
+        if (!seen.has(c.source_url)) {
+          seen.add(c.source_url);
+          orderedUrls.push(c.source_url);
+        }
+      }
+      const pagesToExpand = orderedUrls.slice(0, EXPAND_PAGES);
+      const expanded = [];
+      for (const url of pagesToExpand) {
+        const pageChunks = (await getPageChunks(url)).filter((c) => !isBoilerplate(c.content));
+        expanded.push(...pageChunks);
+      }
+      // Chunks relevantes de paginas fuera del tope: se conservan como apoyo.
+      const others = chunks.filter((c) => !pagesToExpand.includes(c.source_url));
+      chunks = [...expanded, ...others];
+    }
+
     // Sin contexto recuperado -> no llamamos al LLM; respondemos la regla critica.
     let answer;
     let sources = [];
@@ -115,7 +169,13 @@ export async function chatHandler(req, res) {
       answer =
         'Esa informacion no esta en la documentacion disponible. Te sugiero contactar al equipo de soporte.';
     } else {
-      const userMessage = buildUserMessage({ question, chunks });
+      // Ultimos turnos (recortados) para que el LLM entienda referencias como
+      // "Factura (FAC)" sin arrastrar toda la conversacion.
+      const recentHistory = history.slice(-4).map((m) => ({
+        role: m.role,
+        content: (m.content || '').slice(0, 500),
+      }));
+      const userMessage = buildUserMessage({ question, chunks, history: recentHistory });
       const chat = getChatProvider();
       const raw = await chat.generate({ system: SYSTEM_PROMPT, user: userMessage });
       ({ answer, options } = splitAnswerOptions(raw));

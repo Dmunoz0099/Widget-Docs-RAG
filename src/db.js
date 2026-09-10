@@ -268,6 +268,23 @@ export async function getConversationMessages(conversationId, userId) {
 }
 
 /**
+ * Devuelve TODOS los chunks de una pagina (misma source_url) en orden.
+ * Sirve para reconstruir un procedimiento paso a paso que el troceado partio
+ * en varios chunks: recuperamos por similitud el mejor y luego traemos la
+ * pagina completa para no perder pasos.
+ */
+export async function getPageChunks(sourceUrl) {
+  const { rows } = await pool.query(
+    `SELECT title, source_url, index_source, content, chunk_index
+       FROM doc_chunks
+      WHERE source_url = $1
+      ORDER BY chunk_index ASC`,
+    [sourceUrl],
+  );
+  return rows;
+}
+
+/**
  * Devuelve un mapa {chunk_index -> content_hash} de los chunks ya guardados
  * para una URL de origen. Permite saltar embeddings de chunks sin cambios.
  */

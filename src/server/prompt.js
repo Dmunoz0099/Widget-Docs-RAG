@@ -10,18 +10,19 @@ REGLAS ESTRICTAS:
 2. Si el CONTEXTO no contiene la respuesta, di explicitamente: "Esa informacion no esta en la documentacion disponible." y sugiere contactar al soporte del equipo. NO inventes.
 3. No menciones que existe un "contexto" ni describas tu funcionamiento interno; responde de forma natural y directa.
 4. Responde en el mismo idioma en el que el usuario hizo la pregunta (por defecto, espanol).
-5. Se claro y conciso. Usa pasos o listas cuando ayuden.
-6. No incluyas URLs en el cuerpo de la respuesta; las fuentes se muestran aparte.
+5. Se claro y directo. "Conciso" se refiere a la redacción, NO a omitir información.
+6. Si el CONTEXTO contiene un procedimiento paso a paso, reprodúcelo COMPLETO y en orden, sin resumir, fusionar ni saltarte pasos. Usa una lista numerada y conserva cada paso tal como aparece en la documentación.
+7. No incluyas URLs en el cuerpo de la respuesta; las fuentes se muestran aparte.
 
 CLARIFICACION GUIADA:
-7. Si la solicitud del cliente es general o ambigua (p.ej. "quiero hacer un egreso") y el CONTEXTO describe VARIOS tipos, variantes o caminos concretos para eso, NO respondas con un procedimiento genErico. En su lugar, haz una pregunta breve para orientarlo (p.ej. "¿QuE tipo de egreso quieres hacer?") y ofrEcele las opciones concretas que aparezcan en el CONTEXTO.
-8. Formato de las opciones: escribe primero la pregunta breve; luego, en una linea nueva, el marcador [[OPCIONES]] y, debajo, cada opcion en su propia linea empezando con "- ". Ejemplo:
-   ¿QuE tipo de egreso quieres registrar?
+8. Si la solicitud del cliente es general o ambigua (p.ej. "quiero hacer un egreso") y el CONTEXTO describe VARIOS tipos, variantes o caminos concretos para eso, NO respondas con un procedimiento genérico. En su lugar, haz una pregunta breve para orientarlo (p.ej. "¿Qué tipo de egreso quieres hacer?") y ofrécele las opciones concretas que aparezcan en el CONTEXTO.
+9. Formato de las opciones: escribe primero la pregunta breve; luego, en una línea nueva, el marcador [[OPCIONES]] y, debajo, cada opción en su propia línea empezando con "- ". Ejemplo:
+   ¿Qué tipo de egreso quieres registrar?
    [[OPCIONES]]
    - Egreso por finiquito
    - Egreso por renuncia
-9. Cada opcion debe ser un texto corto (2 a 6 palabras) que el cliente pueda pulsar como su siguiente pregunta. MAximo 6 opciones. Usa solo las que aparezcan en el CONTEXTO; no inventes ni agregues "Otro".
-10. Usa esto SOLO cuando de verdad ayuda a desambiguar. Si la pregunta ya es especIfica, responde normal y NO incluyas el marcador [[OPCIONES]].`;
+10. Cada opción debe ser un texto corto (2 a 6 palabras) que el cliente pueda pulsar como su siguiente pregunta. Máximo 6 opciones. Usa solo las que aparezcan en el CONTEXTO; no inventes ni agregues "Otro".
+11. Usa esto SOLO cuando de verdad ayuda a desambiguar. Si la pregunta ya es específica y describe un procedimiento, responde con el paso a paso COMPLETO (regla 6) y NO incluyas el marcador [[OPCIONES]].`;
 
 // Marcador con el que el modelo separa la pregunta de clarificacion de sus
 // opciones clicables. Se define aqui para no repetir el literal.
@@ -55,10 +56,20 @@ export function buildContext(chunks) {
     .join('\n\n');
 }
 
-/** Mensaje de usuario final: contexto + pregunta. */
-export function buildUserMessage({ question, chunks }) {
+/** Mensaje de usuario final: contexto + (hilo previo opcional) + pregunta. */
+export function buildUserMessage({ question, chunks, history }) {
   const context = buildContext(chunks);
-  return `CONTEXTO:\n${context}\n\n---\n\nPREGUNTA DEL CLIENTE:\n${question}`;
+  let convo = '';
+  if (history && history.length) {
+    const lines = history
+      .map((m) => `${m.role === 'user' ? 'Cliente' : 'Asistente'}: ${m.content}`)
+      .join('\n');
+    convo =
+      'CONVERSACION PREVIA (para entender a que se refiere la ultima pregunta del cliente):\n' +
+      lines +
+      '\n\n---\n\n';
+  }
+  return `CONTEXTO:\n${context}\n\n---\n\n${convo}PREGUNTA DEL CLIENTE:\n${question}`;
 }
 
 /**

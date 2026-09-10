@@ -10,6 +10,26 @@ import crypto from 'node:crypto';
 
 const HEADING_RE = /^#{1,6}\s+.*/gm;
 
+// Frases del boilerplate que GitBook agrega a las paginas .md / llms.txt y que
+// no son documentacion real (cabecera del indice, instrucciones para agentes,
+// mecanismo de "query dinamico"). Ensucian el contexto del RAG, asi que se
+// descartan tanto al ingestar como al recuperar.
+const BOILERPLATE_PATTERNS = [
+  'For the complete documentation index',
+  'This documentation is published with GitBook',
+  'Agent Instructions',
+  'Querying This Documentation',
+  'query the documentation dynamically',
+  'The response will contain a direct answer',
+  'Use this mechanism when',
+];
+
+/** True si el fragmento es boilerplate de GitBook (no documentacion util). */
+export function isBoilerplate(content) {
+  const c = content || '';
+  return BOILERPLATE_PATTERNS.some((p) => c.includes(p));
+}
+
 function splitByHeadings(markdown) {
   const sections = [];
   const matches = [...markdown.matchAll(HEADING_RE)];
@@ -75,6 +95,7 @@ export function chunkPage({ markdown, title, sourceUrl, indexSource, chunkSize, 
     for (const content of windows) {
       const trimmed = content.trim();
       if (!trimmed) continue;
+      if (isBoilerplate(trimmed)) continue; // descarta ruido de GitBook
       chunks.push({
         indexSource,
         title,
