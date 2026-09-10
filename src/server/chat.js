@@ -11,7 +11,14 @@ import {
 } from '../db.js';
 import { getChatProvider, getEmbeddingProvider } from '../providers/index.js';
 import { isBoilerplate } from '../ingest/chunk.js';
-import { SYSTEM_PROMPT, buildUserMessage, collectSources, splitAnswerOptions } from './prompt.js';
+import {
+  SYSTEM_PROMPT,
+  NO_CONTEXT_ANSWER,
+  buildUserMessage,
+  collectSources,
+  splitAnswerOptions,
+  filterGroundedOptions,
+} from './prompt.js';
 
 // Cuantas paginas distintas de los resultados se expanden a pagina completa.
 const EXPAND_PAGES = 3;
@@ -166,8 +173,7 @@ export async function chatHandler(req, res) {
     // marcador [[OPCIONES]] que el LLM agrega cuando la pregunta es general.
     let options = [];
     if (!chunks.length) {
-      answer =
-        'Esa informacion no esta en la documentacion disponible. Te sugiero contactar al equipo de soporte.';
+      answer = NO_CONTEXT_ANSWER;
     } else {
       // Ultimos turnos (recortados) para que el LLM entienda referencias como
       // "Factura (FAC)" sin arrastrar toda la conversacion.
@@ -179,9 +185,24 @@ export async function chatHandler(req, res) {
       const chat = getChatProvider();
       const raw = await chat.generate({ system: SYSTEM_PROMPT, user: userMessage });
       ({ answer, options } = splitAnswerOptions(raw));
-      // En una pregunta de clarificacion las fuentes distraen; se muestran solo
-      // cuando el bot da una respuesta de contenido real.
-      sources = options.length ? [] : collectSources(chunks);
+
+      // Red de seguridad anti-alucinacion: si el LLM propuso opciones de
+      // clarificacion, se descartan las que no esten ancladas literalmente en el
+      // CONTEXTO recuperado (p.ej. "Egreso por finiquito"/"Egreso por renuncia",
+      // inventadas a partir del vocabulario de la pregunta y no de la doc).
+      if (options.length) {
+        options = filterGroundedOptions(options, chunks);
+        // Si TODAS las opciones eran inventadas, no mostramos una clarificacion
+        // falsa: respondemos con el mensaje honesto en vez de ofrecer caminos que
+        // no existen (que ademas llevarian a un paso a paso fabricado al pulsarlos).
+        if (!options.length) answer = NO_CONTEXT_ANSWER;
+      }
+
+      // En una pregunta de clarificacion las fuentes distraen; y en el fallback
+      // honesto no hay una fuente real que citar. Se muestran solo cuando el bot
+      // da una respuesta de contenido real.
+      sources =
+        options.length || answer === NO_CONTEXT_ANSWER ? [] : collectSources(chunks);
     }
 
     // Persiste la conversacion. Crea una nueva si no habia conversationId valido.

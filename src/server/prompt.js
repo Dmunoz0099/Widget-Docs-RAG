@@ -14,15 +14,27 @@ REGLAS ESTRICTAS:
 6. Si el CONTEXTO contiene un procedimiento paso a paso, reprodúcelo COMPLETO y en orden, sin resumir, fusionar ni saltarte pasos. Usa una lista numerada y conserva cada paso tal como aparece en la documentación.
 7. No incluyas URLs en el cuerpo de la respuesta; las fuentes se muestran aparte.
 
+ANTI-INVENCION (CRITICO):
+- La pregunta del cliente puede mencionar conceptos, palabras o casos que NO aparecen en el CONTEXTO (p.ej. "empleado", "finiquito", "renuncia", "sueldo"). Esas palabras del cliente NO son documentacion: NO las uses para inventar tipos, variantes, pasos, campos ni procedimientos.
+- Nunca "traduzcas" ni "adaptes" el vocabulario de la pregunta a la funcionalidad de la doc. Si el cliente pide algo que el CONTEXTO no describe, aplica la regla 2 (di que no esta en la documentacion), aunque el tema suene parecido.
+- Cada tipo, opcion, campo o paso que menciones debe aparecer LITERALMENTE en el CONTEXTO. Si no lo puedes señalar en el texto del CONTEXTO, no lo escribas.
+
 CLARIFICACION GUIADA:
 8. Si la solicitud del cliente es general o ambigua (p.ej. "quiero hacer un egreso") y el CONTEXTO describe VARIOS tipos, variantes o caminos concretos para eso, NO respondas con un procedimiento genérico. En su lugar, haz una pregunta breve para orientarlo (p.ej. "¿Qué tipo de egreso quieres hacer?") y ofrécele las opciones concretas que aparezcan en el CONTEXTO.
-9. Formato de las opciones: escribe primero la pregunta breve; luego, en una línea nueva, el marcador [[OPCIONES]] y, debajo, cada opción en su propia línea empezando con "- ". Ejemplo:
+9. Formato de las opciones: escribe primero la pregunta breve; luego, en una línea nueva, el marcador [[OPCIONES]] y, debajo, cada opción en su propia línea empezando con "- ". Ejemplo (las opciones se toman del CONTEXTO, no del ejemplo):
    ¿Qué tipo de egreso quieres registrar?
    [[OPCIONES]]
-   - Egreso por finiquito
-   - Egreso por renuncia
-10. Cada opción debe ser un texto corto (2 a 6 palabras) que el cliente pueda pulsar como su siguiente pregunta. Máximo 6 opciones. Usa solo las que aparezcan en el CONTEXTO; no inventes ni agregues "Otro".
-11. Usa esto SOLO cuando de verdad ayuda a desambiguar. Si la pregunta ya es específica y describe un procedimiento, responde con el paso a paso COMPLETO (regla 6) y NO incluyas el marcador [[OPCIONES]].`;
+   - Traspaso
+   - Merma
+10. Cada opción debe ser un término que aparezca LITERALMENTE en el CONTEXTO (copia el nombre tal cual figura, p.ej. el título de la sección o del tipo). Texto corto (1 a 6 palabras). Máximo 6 opciones. PROHIBIDO inventar, deducir o agregar opciones que no estén escritas en el CONTEXTO; PROHIBIDO agregar "Otro".
+11. Usa esto SOLO cuando de verdad ayuda a desambiguar. Si la pregunta ya es específica y describe un procedimiento, responde con el paso a paso COMPLETO (regla 6) y NO incluyas el marcador [[OPCIONES]].
+12. Si no hay en el CONTEXTO tipos/variantes concretos que ofrecer (o solo los sabrías por conocimiento externo), NO uses el marcador [[OPCIONES]]: aplica la regla 2.`;
+
+// Mensaje honesto cuando no hay respuesta anclada en la documentacion. Se usa
+// tanto cuando no se recupera contexto como cuando las opciones de clarificacion
+// resultan no ancladas (inventadas) y se descartan.
+export const NO_CONTEXT_ANSWER =
+  'Esa informacion no esta en la documentacion disponible. Te sugiero contactar al equipo de soporte.';
 
 // Marcador con el que el modelo separa la pregunta de clarificacion de sus
 // opciones clicables. Se define aqui para no repetir el literal.
@@ -47,6 +59,53 @@ export function splitAnswerOptions(raw) {
     .filter(Boolean)
     .slice(0, 6);
   return { answer, options };
+}
+
+// Palabras genericas/vacias que no sirven para verificar si una opcion esta
+// anclada en el CONTEXTO (articulos, preposiciones y el vocabulario de dominio
+// que es comun a todas las variantes). Sin ellas, lo que queda de una opcion son
+// sus palabras "distintivas" (p.ej. de "Egreso por finiquito" queda "finiquito").
+const OPTION_STOPWORDS = new Set([
+  'egreso', 'egresos', 'ingreso', 'ingresos', 'nuevo', 'nueva', 'tipo', 'tipos',
+  'de', 'del', 'la', 'el', 'los', 'las', 'un', 'una', 'unos', 'unas', 'por',
+  'para', 'con', 'sin', 'y', 'o', 'u', 'a', 'en', 'al', 'hacer', 'registrar',
+  'realizar', 'opcion', 'opciones', 'que', 'como',
+]);
+
+/** Normaliza texto para comparar: minusculas, sin acentos, solo alfanumerico. */
+function normalizeForMatch(s) {
+  return String(s == null ? '' : s)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // quita diacriticos (á -> a)
+    .replace(/[^a-z0-9ñ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Filtra las opciones de clarificacion para dejar SOLO las que estan ancladas en
+ * el CONTEXTO recuperado. Es la red de seguridad programatica contra las opciones
+ * inventadas por el LLM (p.ej. "Egreso por finiquito" cuando la doc solo describe
+ * egresos de inventario: Traspaso, Merma, Ajuste, Devolucion).
+ *
+ * Una opcion se considera anclada si TODAS sus palabras distintivas (quitando
+ * stopwords/vocabulario de dominio) aparecen en el texto del CONTEXTO. Si una
+ * opcion no tiene ninguna palabra distintiva, se descarta por ser demasiado
+ * generica para verificarla.
+ */
+export function filterGroundedOptions(options, chunks) {
+  if (!Array.isArray(options) || !options.length) return [];
+  const haystack = new Set(
+    normalizeForMatch(chunks.map((c) => `${c.title} ${c.content}`).join(' ')).split(' '),
+  );
+  return options.filter((opt) => {
+    const tokens = normalizeForMatch(opt)
+      .split(' ')
+      .filter((w) => w.length >= 3 && !OPTION_STOPWORDS.has(w));
+    if (!tokens.length) return false;
+    return tokens.every((t) => haystack.has(t));
+  });
 }
 
 /** Construye el bloque de contexto a partir de los chunks recuperados. */
