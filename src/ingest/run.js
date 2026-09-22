@@ -1,5 +1,5 @@
 import { config, assertProviderKeys } from '../config.js';
-import { initSchema, getExistingHashes, upsertChunk, deleteStaleChunks, pool } from '../db.js';
+import { initSchema, getExistingHashes, upsertChunk, deleteStaleChunks, deleteRemovedPages, pool } from '../db.js';
 import { getEmbeddingProvider } from '../providers/index.js';
 import { fetchLlmsIndex } from './fetchIndex.js';
 import { fetchPage, sleep } from './fetchPage.js';
@@ -89,7 +89,7 @@ async function main() {
 
   await initSchema();
   const provider = getEmbeddingProvider();
-  const stats = { indexes: 0, pages: 0, upserted: 0, skipped: 0, errors: 0 };
+  const stats = { indexes: 0, pages: 0, upserted: 0, skipped: 0, removed: 0, errors: 0 };
 
   for (const indexUrl of config.llmsIndexes) {
     const indexSource = deriveIndexSource(indexUrl);
@@ -114,6 +114,21 @@ async function main() {
       }
       await sleep(config.fetchDelayMs);
     }
+
+    // Poda paginas/secciones eliminadas del indice: si una pagina ya no aparece
+    // en llms.txt (p.ej. se borro una seccion en GitBook), sus chunks se quedaban
+    // huerfanos en la BD y seguian apareciendo como "modulo". Los borramos usando
+    // las URLs presentes en el indice actual como fuente de verdad.
+    try {
+      const removed = await deleteRemovedPages(indexSource, pages.map((p) => p.url));
+      if (removed > 0) {
+        stats.removed += removed;
+        console.log(`  🗑  ${removed} chunks de paginas eliminadas del indice`);
+      }
+    } catch (e) {
+      console.error(`  ✗ Error podando paginas obsoletas: ${e.message}`);
+      stats.errors += 1;
+    }
   }
 
   console.log('\n== Resumen ==');
@@ -121,6 +136,7 @@ async function main() {
   console.log(`Paginas:   ${stats.pages}`);
   console.log(`Upserts:   ${stats.upserted}`);
   console.log(`Sin cambio:${stats.skipped}`);
+  console.log(`Eliminados:${stats.removed}`);
   console.log(`Errores:   ${stats.errors}`);
 
   await pool.end();

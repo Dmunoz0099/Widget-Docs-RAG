@@ -335,6 +335,24 @@ export async function deleteStaleChunks(sourceUrl, keepCount) {
 }
 
 /**
+ * Borra chunks de paginas que YA NO aparecen en el indice (llms.txt) de un
+ * manual: se elimino una seccion/pagina entera en GitBook. `keepUrls` son las
+ * URLs presentes en el indice actual; todo lo demas de ese index_source se borra.
+ * Devuelve cuantas filas se eliminaron. Con keepUrls vacio no borra nada (evita
+ * vaciar el manual por un indice que fallo al descargarse).
+ */
+export async function deleteRemovedPages(indexSource, keepUrls) {
+  if (!keepUrls || keepUrls.length === 0) return 0;
+  const { rowCount } = await pool.query(
+    `DELETE FROM doc_chunks
+      WHERE index_source = $1
+        AND NOT (source_url = ANY($2::text[]))`,
+    [indexSource, keepUrls],
+  );
+  return rowCount;
+}
+
+/**
  * Recupera los N chunks mas similares al embedding de la pregunta.
  * `filter` (opcional) acota la busqueda:
  *   { sectionPrefix }  -> una seccion de un manual (por prefijo de URL)
