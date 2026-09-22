@@ -17,6 +17,9 @@
  *   data-header-to        fin del gradiente del header
  *   data-docs-url         URL de la documentacion (menu "Centro de Ayuda" / "Articulos")
  *   data-brand-name       nombre visible del asistente (por defecto "Asistente")
+ *   data-product-name     nombre del producto/portal para el saludo (p.ej. "DigitalDTE")
+ *   data-welcome-title    titulo del hero de bienvenida (por defecto "¡Hola! Soy la IA de {producto}")
+ *   data-welcome          subtitulo del hero de bienvenida
  *   data-manual           index_source del manual de este portal (p.ej. "ims"): el
  *                         widget solo muestra/consulta los modulos de ese manual.
  *
@@ -69,6 +72,14 @@
 
   var docsUrl = attr('data-docs-url', '');
   var brandName = attr('data-brand-name', 'Asistente');
+  // Bienvenida tipo "hero" (avatar + titulo + subtitulo). El titulo usa el
+  // nombre del producto (data-product-name); data-welcome-title y data-welcome
+  // permiten sobreescribir titulo y subtitulo por portal.
+  var productName = attr('data-product-name', '').trim();
+  var welcomeTitle = attr('data-welcome-title', '').trim() ||
+    (productName ? '¡Hola! Soy la IA de ' + productName : '¡Hola! Soy tu asistente virtual');
+  var welcomeText = attr('data-welcome', '').trim() ||
+    'Estoy aquí para resolver tus dudas sobre la plataforma y guiarte paso a paso cuando lo necesites.';
   var firstName = (userName || '').trim().split(/\s+/)[0] || '';
 
   // Manual (index_source) al que pertenece este portal. Si se declara, el widget
@@ -125,11 +136,26 @@
       height: 600px; max-height: calc(100vh - 120px);
       background: var(--wg-bg); border-radius: 18px; overflow: hidden;
       box-shadow: 0 16px 48px rgba(0,0,0,.30);
-      display: none; flex-direction: column;
+      display: flex; flex-direction: column;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       color: var(--wg-text);
+      transform-origin: bottom right;
+      opacity: 0; visibility: hidden;
+      transform: translateY(16px) scale(.94);
+      transition: opacity .2s ease,
+                  transform .28s cubic-bezier(.16, 1, .3, 1),
+                  visibility 0s linear .28s;
     }
-    .panel.open { display: flex; }
+    .panel.open {
+      opacity: 1; visibility: visible;
+      transform: translateY(0) scale(1);
+      transition: opacity .24s ease,
+                  transform .34s cubic-bezier(.16, 1, .3, 1),
+                  visibility 0s;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .panel, .panel.open { transition: opacity .15s ease, visibility 0s; transform: none; }
+    }
 
     /* --- Header --- */
     .header {
@@ -215,6 +241,24 @@
       background: #eef0f4; color: var(--wg-muted);
     }
     .empty { text-align: center; color: var(--wg-muted); font-size: 13px; padding: 40px 20px; }
+
+    /* --- Bienvenida (hero) --- */
+    .welcome { text-align: center; padding: 28px 20px 10px; animation: wIn .5s cubic-bezier(.16, 1, .3, 1) both; }
+    .welcome .wavatar {
+      width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 16px;
+      background: linear-gradient(135deg, var(--wg-header-from), var(--wg-header-to));
+      display: flex; align-items: center; justify-content: center; color: #fff;
+      box-shadow: 0 12px 28px color-mix(in srgb, var(--wg-primary) 42%, transparent);
+      animation: wFloat 3.2s ease-in-out infinite;
+    }
+    .welcome .wavatar svg { width: 38px; height: 38px; }
+    .welcome .wtitle { font-size: 18px; font-weight: 700; color: var(--wg-text); margin: 0 0 8px; }
+    .welcome .wsub { font-size: 13.5px; line-height: 1.5; color: var(--wg-muted); max-width: 290px; margin: 0 auto; }
+    @keyframes wIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes wFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .welcome, .welcome .wavatar { animation: none; }
+    }
 
     .newconvo-wrap {
       position: absolute; left: 0; right: 0; bottom: 40px; padding: 12px 16px;
@@ -394,8 +438,8 @@
 
         <!-- CHAT -->
         <div class="screen screen-chat">
-          <div class="modcard-slot"></div>
           <div class="messages"></div>
+          <div class="modcard-slot"></div>
         </div>
       </div>
 
@@ -586,11 +630,37 @@
     state.started = false;
   }
 
+  var WELCOME_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.9 5.1L19 9l-5.1 1.9L12 16l-1.9-5.1L5 9l5.1-1.9z"></path><path d="M19 13l.95 2.55L22.5 16.5l-2.55.95L19 20l-.95-2.55L15.5 16.5l2.55-.95z"></path></svg>';
+
+  // Hero de bienvenida: avatar con gradiente + titulo + subtitulo (centrado).
+  // Titulo/subtitulo vienen de data-* del portal; se insertan como texto plano.
+  function renderWelcome() {
+    var w = document.createElement('div');
+    w.className = 'welcome';
+    var av = document.createElement('div');
+    av.className = 'wavatar';
+    av.innerHTML = WELCOME_ICON;
+    var t = document.createElement('div');
+    t.className = 'wtitle';
+    t.textContent = welcomeTitle;
+    var s = document.createElement('div');
+    s.className = 'wsub';
+    s.textContent = welcomeText;
+    w.appendChild(av);
+    w.appendChild(t);
+    w.appendChild(s);
+    messages.appendChild(w);
+  }
+
   function startNewConversation() {
     resetChat();
     showScreen('chat');
     hTitle.textContent = 'Nueva conversación';
     hSub.textContent = '';
+    // Bienvenida tipo "hero" (avatar + titulo + subtitulo): encuadra para que
+    // sirve el asistente antes de elegir modulo. messages va primero, asi que
+    // aparece sobre la tarjeta.
+    renderWelcome();
     // Renderiza la tarjeta al instante (evita el hueco en blanco mientras carga
     // /api/modules) y rellena los modulos especificos cuando lleguen.
     renderModuleCard(state.modules || []);

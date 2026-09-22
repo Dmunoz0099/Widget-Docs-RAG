@@ -41,6 +41,9 @@ app.get('/test-dps.html', (req, res) => {
 app.get('/test-ims.html', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../../test-ims.html'));
 });
+app.get('/test-digitaldte.html', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../test-digitaldte.html'));
+});
 
 // Health check simple.
 app.get('/api/health', async (req, res) => {
