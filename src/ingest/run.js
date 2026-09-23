@@ -1,5 +1,5 @@
 import { config, assertProviderKeys } from '../config.js';
-import { initSchema, getExistingHashes, upsertChunk, deleteStaleChunks, deleteRemovedPages, pool } from '../db.js';
+import { initSchema, getExistingHashes, upsertChunk, deleteStaleChunks, deleteRemovedPages, setPageOrder, pool } from '../db.js';
 import { getEmbeddingProvider } from '../providers/index.js';
 import { fetchLlmsIndex } from './fetchIndex.js';
 import { fetchPage, sleep } from './fetchPage.js';
@@ -127,6 +127,14 @@ async function main() {
       }
     } catch (e) {
       console.error(`  ✗ Error podando paginas obsoletas: ${e.message}`);
+      stats.errors += 1;
+    }
+
+    // Orden de las paginas segun llms.txt (define el orden de los modulos).
+    try {
+      await setPageOrder(pages.map((p) => p.url));
+    } catch (e) {
+      console.error(`  ✗ Error guardando el orden de paginas: ${e.message}`);
       stats.errors += 1;
     }
   }

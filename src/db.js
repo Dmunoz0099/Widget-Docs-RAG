@@ -58,6 +58,13 @@ export async function initSchema() {
       CREATE INDEX IF NOT EXISTS doc_chunks_index_source_idx
         ON doc_chunks (index_source)
     `);
+
+    // Posicion de la pagina dentro de su llms.txt. Ordena los modulos igual que
+    // el menu de GitBook (el id solo refleja el orden de insercion, y las
+    // paginas agregadas despues quedaban al final).
+    await client.query(
+      'ALTER TABLE doc_chunks ADD COLUMN IF NOT EXISTS page_order INT',
+    );
   } finally {
     client.release();
   }
@@ -141,10 +148,11 @@ function prettify(slug) {
  */
 export async function getModules() {
   const { rows } = await pool.query(
-    `SELECT source_url, title, index_source, MIN(id) AS ord
+    `SELECT source_url, title, index_source,
+            MIN(page_order) AS page_ord, MIN(id) AS ord
        FROM doc_chunks
       GROUP BY source_url, title, index_source
-      ORDER BY ord`,
+      ORDER BY page_ord NULLS LAST, ord`,
   );
 
   // Agrupa las paginas por manual (index_source), preservando el orden.
@@ -331,6 +339,21 @@ export async function deleteStaleChunks(sourceUrl, keepCount) {
   await pool.query(
     'DELETE FROM doc_chunks WHERE source_url = $1 AND chunk_index >= $2',
     [sourceUrl, keepCount],
+  );
+}
+
+/**
+ * Guarda la posicion de cada pagina segun su orden en el llms.txt (`urls`).
+ * Un solo UPDATE por manual; no toca contenido ni embeddings.
+ */
+export async function setPageOrder(urls) {
+  if (!urls || urls.length === 0) return;
+  await pool.query(
+    `UPDATE doc_chunks d
+        SET page_order = o.pos
+       FROM unnest($1::text[]) WITH ORDINALITY AS o(url, pos)
+      WHERE d.source_url = o.url`,
+    [urls],
   );
 }
 

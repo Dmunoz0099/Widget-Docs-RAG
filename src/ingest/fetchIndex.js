@@ -5,7 +5,8 @@
  */
 
 // Captura: - [Titulo](URL)   (con o sin guion/espacios iniciales)
-const LINK_RE = /^\s*[-*]?\s*\[([^\]]+)\]\(([^)]+)\)\s*$/;
+// Admite la descripcion opcional del formato llms.txt: "- [Titulo](URL): texto".
+const LINK_RE = /^\s*[-*]?\s*\[([^\]]+)\]\(([^)\s]+)\)\s*(?::.*)?$/;
 
 export function parseLlmsIndex(markdown, baseUrl) {
   const links = [];
