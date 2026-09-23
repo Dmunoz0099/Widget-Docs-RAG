@@ -14,6 +14,8 @@ import { isBoilerplate } from '../ingest/chunk.js';
 import {
   SYSTEM_PROMPT,
   NO_CONTEXT_ANSWER,
+  isNoContextAnswer,
+  normalizeText,
   buildUserMessage,
   collectSources,
   splitAnswerOptions,
@@ -21,7 +23,27 @@ import {
 } from './prompt.js';
 
 // Cuantas paginas distintas de los resultados se expanden a pagina completa.
-const EXPAND_PAGES = 3;
+// Con 3 se quedaba fuera la pagina correcta cuando varias paginas hermanas
+// (p.ej. "Precios Capturados" vs "Programacion de Scrapers") puntuaban parecido.
+const EXPAND_PAGES = 5;
+
+/**
+ * true si alguna palabra significativa del titulo de la pagina aparece en la
+ * pregunta. Compara por raiz de 5 letras sin tildes para tolerar flexiones
+ * ("programo" ~ "Programacion", "scraper" ~ "Scrapers").
+ */
+function titleMatchesQuestion(title, question) {
+  const stems = new Set(
+    normalizeText(question)
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 4)
+      .map((w) => w.slice(0, 5)),
+  );
+  return normalizeText(title)
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 4)
+    .some((w) => stems.has(w.slice(0, 5)));
+}
 
 // Cache en memoria de los index_source conocidos (manuales ingestados).
 // Sirve para decidir si el "modulo" seleccionado es un filtro real de BD o solo
@@ -155,7 +177,13 @@ export async function chatHandler(req, res) {
           orderedUrls.push(c.source_url);
         }
       }
-      const pagesToExpand = orderedUrls.slice(0, EXPAND_PAGES);
+      // Las paginas cuyo titulo coincide con la pregunta suben al frente
+      // (manteniendo el orden de relevancia dentro de cada grupo), para que el
+      // LLM lea primero la pagina que el usuario esta nombrando.
+      const titleOf = new Map(chunks.map((c) => [c.source_url, c.title]));
+      const matched = orderedUrls.filter((u) => titleMatchesQuestion(titleOf.get(u), question));
+      const rest = orderedUrls.filter((u) => !matched.includes(u));
+      const pagesToExpand = [...matched, ...rest].slice(0, EXPAND_PAGES);
       const expanded = [];
       for (const url of pagesToExpand) {
         const pageChunks = (await getPageChunks(url)).filter((c) => !isBoilerplate(c.content));
@@ -202,7 +230,7 @@ export async function chatHandler(req, res) {
       // honesto no hay una fuente real que citar. Se muestran solo cuando el bot
       // da una respuesta de contenido real.
       sources =
-        options.length || answer === NO_CONTEXT_ANSWER ? [] : collectSources(chunks);
+        options.length || isNoContextAnswer(answer) ? [] : collectSources(chunks, answer);
     }
 
     // Persiste la conversacion. Crea una nueva si no habia conversationId valido.

@@ -36,6 +36,22 @@ CLARIFICACION GUIADA:
 export const NO_CONTEXT_ANSWER =
   'Esa informacion no esta en la documentacion disponible. Te sugiero contactar al equipo de soporte.';
 
+/** Minusculas y sin tildes, para comparar texto del LLM de forma flexible. */
+export function normalizeText(text) {
+  return (text || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
+/**
+ * true si la respuesta es el fallback honesto, aunque el LLM lo haya redactado
+ * con tildes o con otra despedida ("contactar al soporte del equipo").
+ */
+export function isNoContextAnswer(answer) {
+  return normalizeText(answer).includes('no esta en la documentacion disponible');
+}
+
 // Marcador con el que el modelo separa la pregunta de clarificacion de sus
 // opciones clicables. Se define aqui para no repetir el literal.
 const OPTIONS_MARKER = '[[OPCIONES]]';
@@ -141,12 +157,45 @@ export function toPageUrl(mdUrl) {
   return mdUrl.replace(/\.md(?=$|[?#])/, '');
 }
 
+/** Raices (5 letras, sin tildes) de las palabras de 5+ letras de un texto. */
+function stemSet(text) {
+  return new Set(
+    normalizeText(text)
+      .split(/[^a-z0-9]+/)
+      .filter((w) => w.length >= 5)
+      .map((w) => w.slice(0, 5)),
+  );
+}
+
 /**
  * Devuelve solo la fuente mas relevante (titulo + url).
- * Los chunks llegan ordenados por similitud, asi que el primero es el mejor.
+ * Con `answer`, cita la pagina del contexto cuyo contenido comparte mas
+ * vocabulario con la respuesta generada (la pagina de la que realmente salio),
+ * en vez del top-1 de la busqueda, que puede ser una pagina hermana parecida
+ * (p.ej. "Precios Capturados" al responder sobre "Programacion de Scrapers").
+ * Empate o sin `answer` -> el primer chunk, que es el de mayor relevancia.
  */
-export function collectSources(chunks) {
+export function collectSources(chunks, answer) {
   const top = chunks[0];
   if (!top) return [];
-  return [{ title: top.title, url: toPageUrl(top.source_url) }];
+  let best = top;
+  if (answer) {
+    const answerStems = stemSet(answer);
+    const pages = new Map();
+    for (const c of chunks) {
+      if (!pages.has(c.source_url)) pages.set(c.source_url, { chunk: c, text: '' });
+      pages.get(c.source_url).text += ' ' + c.content;
+    }
+    let bestScore = -1;
+    for (const { chunk, text } of pages.values()) {
+      const pageStems = stemSet(text);
+      let score = 0;
+      for (const s of answerStems) if (pageStems.has(s)) score++;
+      if (score > bestScore) {
+        bestScore = score;
+        best = chunk;
+      }
+    }
+  }
+  return [{ title: best.title, url: toPageUrl(best.source_url) }];
 }
